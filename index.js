@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
 const app = express();
 const port = process.env.PORT || 5000;
 require("dotenv").config();
@@ -56,7 +57,7 @@ async function run() {
 
       if (user) {
         const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, {
-          expiresIn: "1h",
+          expiresIn: "5h",
         });
         return res.send({ accessToken: token });
       }
@@ -79,6 +80,12 @@ async function run() {
     });
 
     //user
+    //allusers get
+    app.get("/users", async (req, res) => {
+      const query = {};
+      const result = await usersCollection.find(query).toArray();
+      res.send(result);
+    });
 
     //post user
     app.post("/users", async (req, res) => {
@@ -87,11 +94,43 @@ async function run() {
       res.send(result);
     });
 
+    //delete user
+    app.delete("/users/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const result = await doctorsCollection.deleteOne(filter);
+      res.send(result);
+    });
+
+    //access oparation
+    //admin for access
+    app.get("/users/admin/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email };
+      const user = await usersCollection.findOne(query);
+      res.send({ isAdmin: user?.role === "admin" });
+    });
+
+    //buyer for access
+    app.get("/users/buyer/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email };
+      const user = await usersCollection.findOne(query);
+      res.send({ isBuyer: user?.role === "buyer" });
+    });
     //cartorder
     //add to cart
-    app.post("/cart", verifyJWT, async (req, res) => {
+    app.post("/cart", async (req, res) => {
       const cart = req.body;
       const result = await ordersCollection.insertOne(cart);
+      res.send(result);
+    });
+
+    //cart or order show
+    app.get("/cart", async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const result = await ordersCollection.find(query).toArray();
       res.send(result);
     });
   } finally {
