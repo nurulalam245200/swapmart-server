@@ -29,7 +29,8 @@ async function run() {
       .db("swapMart")
       .collection("productsCategory");
     const productsCollection = client.db("swapMart").collection("products");
-
+    const sellersCollection = client.db("swapMart").collection("sellers");
+    const usersCollection = client.db("swapMart").collection("users");
     //products category load
     app.get("/productsCategory", async (req, res) => {
       const query = {};
@@ -42,6 +43,15 @@ async function run() {
       const id = req.params.id;
       const filter = { category_Id: id };
       const result = await productsCollection.find(filter).toArray();
+      res.send(result);
+    });
+
+    //user
+
+    //post user
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      const result = await usersCollection.insertOne(user);
       res.send(result);
     });
   } finally {
