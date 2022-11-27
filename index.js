@@ -16,7 +16,7 @@ app.get("/", async (req, res) => {
 
 //database oparation
 
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.3kkv8ke.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, {
   useNewUrlParser: true,
@@ -98,7 +98,7 @@ async function run() {
     app.delete("/users/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
-      const result = await doctorsCollection.deleteOne(filter);
+      const result = await usersCollection.deleteOne(filter);
       res.send(result);
     });
 
