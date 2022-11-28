@@ -85,7 +85,7 @@ async function run() {
     });
 
     //get categoryproducts
-    app.get("/products/:id", async (req, res) => {
+    app.get("/products/:id", verifyJWT, async (req, res) => {
       const id = req.params.id;
       const filter = { category_Id: id };
       const result = await productsCollection.find(filter).toArray();
@@ -155,7 +155,7 @@ async function run() {
       res.send(result);
     });
     //delete seller data
-    app.delete("/products/:id", async (req, res) => {
+    app.delete("/products/:id", verifyJWT, async (req, res) => {
       const email = req.params.id;
       const filter = { _id: ObjectId(id) };
       const result = await productsCollection.deleteOne(filter);
@@ -219,14 +219,14 @@ async function run() {
     });
     //cartorder
     //add to cart
-    app.post("/cart", async (req, res) => {
+    app.post("/cart", verifyJWT, async (req, res) => {
       const cart = req.body;
       const result = await ordersCollection.insertOne(cart);
       res.send(result);
     });
 
     //cart or order show
-    app.get("/cart", async (req, res) => {
+    app.get("/cart", verifyJWT, async (req, res) => {
       const email = req.query.email;
       const query = { email: email };
       const result = await ordersCollection.find(query).toArray();
@@ -249,7 +249,7 @@ async function run() {
     });
 
     //payment insert
-    app.post("/payments", async (req, res) => {
+    app.post("/payments", verifyJWT, async (req, res) => {
       const payment = req.body;
       const result = await paymentsCollection.insertOne(payment);
       const id = payment.bookingId;
@@ -268,7 +268,7 @@ async function run() {
     });
 
     //for payment by get data by id
-    app.get("/cart/:id", async (req, res) => {
+    app.get("/cart/:id", verifyJWT, async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
       const result = await ordersCollection.findOne(query).toArray();
