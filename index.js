@@ -90,6 +90,33 @@ async function run() {
       const result = await productsCollection.find(query).toArray();
       res.send(result);
     });
+
+    //product add verified by admin
+    app.put("/products/:id", async (req, res) => {
+      //  const decodedEmail = req.decoded.email;
+      //  const query = { email: decodedEmail };
+      //  const user = await usersCollection.findOne(query);
+
+      //  if (user?.role !== "admin") {
+      //    return res.status(403).send({ message: "forbidden access" });
+      //  }
+
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set: {
+          isVerified: "yes",
+        },
+      };
+      const result = await productsCollection.updateOne(
+        filter,
+        updatedDoc,
+        options
+      );
+      res.send(result);
+    });
+
     //info for seller add product
     app.get("/productInfo", async (req, res) => {
       const query = {};
