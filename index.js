@@ -84,7 +84,38 @@ async function run() {
       const result = await productsCollection.insertOne(products);
       res.send(result);
     });
-    //product show in manage products
+    //product show for email
+    // app.get("/users/:role", async (req, res) => {
+    //   const role = req.params.role;
+    //   const query = { role: role };
+    //   const result = await usersCollection.find(query).toArray();
+    //   res.send(result);
+    // });
+    app.get("/users/:role", async (req, res) => {
+      const role = req.params.role;
+      const query = { role: role };
+      const user = await usersCollection.find(query).toArray();
+      res.send(user);
+    });
+
+    //make verified
+    app.put("/users/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set: {
+          isVerified: "yes",
+        },
+      };
+      const result = await usersCollection.updateOne(
+        filter,
+        updatedDoc,
+        options
+      );
+      res.send(result);
+    });
+    // product show in manage products
     app.get("/products", async (req, res) => {
       const query = {};
       const result = await productsCollection.find(query).toArray();
@@ -109,6 +140,13 @@ async function run() {
       res.send(result);
     });
 
+    // for seller data
+    app.get("/products", async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const result = await productsCollection.find(query).toArray();
+      res.send(result);
+    });
     //info for seller add product
     app.get("/productInfo", async (req, res) => {
       const query = {};
@@ -176,6 +214,13 @@ async function run() {
       const email = req.query.email;
       const query = { email: email };
       const result = await ordersCollection.find(query).toArray();
+      res.send(result);
+    });
+    //for payment
+    app.get("/cart/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await ordersCollection.findOne(query).toArray();
       res.send(result);
     });
   } finally {
