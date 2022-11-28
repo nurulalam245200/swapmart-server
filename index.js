@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken");
 const app = express();
 const port = process.env.PORT || 5000;
 require("dotenv").config();
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 //mideleware
 
 app.use(cors());
@@ -45,10 +46,22 @@ async function run() {
       .db("swapMart")
       .collection("productsCategory");
     const productsCollection = client.db("swapMart").collection("products");
-    const sellersCollection = client.db("swapMart").collection("sellers");
+    // const sellersCollection = client.db("swapMart").collection("sellers");
     const usersCollection = client.db("swapMart").collection("users");
     const ordersCollection = client.db("swapMart").collection("orders");
+    const paymentsCollection = client.db("swapMart").collection("payments");
 
+    //verifyadmin
+    const verifyAdmin = async (req, res, next) => {
+      const decodedEmail = req.decoded.email;
+      const query = { email: decodedEmail };
+      const user = await usersCollection.findOne(query);
+
+      if (user?.role !== "admin") {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      next();
+    };
     //jwt
     app.get("/jwt", async (req, res) => {
       const email = req.query.email;
@@ -84,13 +97,7 @@ async function run() {
       const result = await productsCollection.insertOne(products);
       res.send(result);
     });
-    //product show for email
-    // app.get("/users/:role", async (req, res) => {
-    //   const role = req.params.role;
-    //   const query = { role: role };
-    //   const result = await usersCollection.find(query).toArray();
-    //   res.send(result);
-    // });
+
     app.get("/users/:role", async (req, res) => {
       const role = req.params.role;
       const query = { role: role };
@@ -99,7 +106,7 @@ async function run() {
     });
 
     //make verified
-    app.put("/users/:id", async (req, res) => {
+    app.put("/users/:id", verifyJWT, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
       const options = { upsert: true };
@@ -165,8 +172,9 @@ async function run() {
       res.send(result);
     });
     //user
+
     //allusers get
-    app.get("/users", async (req, res) => {
+    app.get("/users", verifyJWT, verifyAdmin, async (req, res) => {
       const query = {};
       const result = await usersCollection.find(query).toArray();
       res.send(result);
@@ -180,7 +188,7 @@ async function run() {
     });
 
     //delete user
-    app.delete("/users/:id", async (req, res) => {
+    app.delete("/users/:id", verifyJWT, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
       const result = await usersCollection.deleteOne(filter);
@@ -225,6 +233,41 @@ async function run() {
       res.send(result);
     });
     //for payment
+    //payment method
+    app.post("/create-payment-intent", async (req, res) => {
+      const buying = req.body;
+      const price = buying.price;
+      const amount = price * 100;
+      const paymentIntent = await stripe.paymentIntents.create({
+        currency: "usd",
+        amount: amount,
+        payment_method_types: ["card"],
+      });
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+    //payment insert
+    app.post("/payments", async (req, res) => {
+      const payment = req.body;
+      const result = await paymentsCollection.insertOne(payment);
+      const id = payment.bookingId;
+      const filter = { _id: ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          paid: true,
+          transactionId: payment.transactionId,
+        },
+      };
+      const updatedResult = await ordersCollection.updateOne(
+        filter,
+        updatedDoc
+      );
+      res.send(result);
+    });
+
+    //for payment by get data by id
     app.get("/cart/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
