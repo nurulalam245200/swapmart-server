@@ -147,6 +147,14 @@ async function run() {
       const result = await productsCollection.find(query).toArray();
       res.send(result);
     });
+    //delete seller data
+    app.delete("/products/:id", async (req, res) => {
+      const email = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const result = await productsCollection.deleteOne(filter);
+      res.send(result);
+      console.log(result);
+    });
     //info for seller add product
     app.get("/productInfo", async (req, res) => {
       const query = {};
