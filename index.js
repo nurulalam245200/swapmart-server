@@ -4,19 +4,14 @@ const jwt = require("jsonwebtoken");
 const app = express();
 const port = process.env.PORT || 5000;
 require("dotenv").config();
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 //mideleware
-
 app.use(cors());
 app.use(express.json());
-
 //oparation
 app.get("/", async (req, res) => {
   res.send("SwapMart running on");
 });
-
 //database oparation
-
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.3kkv8ke.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, {
@@ -31,7 +26,6 @@ function verifyJWT(req, res, next) {
     return res.status(401).send("Unauthorized Access");
   }
   const token = authHeader.split(" ")[1];
-
   jwt.verify(token, process.env.ACCESS_TOKEN, function (error, decoded) {
     if (error) {
       return res.status(403).send(message, "Forbiden Accesss");
@@ -46,28 +40,14 @@ async function run() {
       .db("swapMart")
       .collection("productsCategory");
     const productsCollection = client.db("swapMart").collection("products");
-    // const sellersCollection = client.db("swapMart").collection("sellers");
+    const sellersCollection = client.db("swapMart").collection("sellers");
     const usersCollection = client.db("swapMart").collection("users");
     const ordersCollection = client.db("swapMart").collection("orders");
-    const paymentsCollection = client.db("swapMart").collection("payments");
-
-    //verifyadmin
-    const verifyAdmin = async (req, res, next) => {
-      const decodedEmail = req.decoded.email;
-      const query = { email: decodedEmail };
-      const user = await usersCollection.findOne(query);
-
-      if (user?.role !== "admin") {
-        return res.status(403).send({ message: "forbidden access" });
-      }
-      next();
-    };
     //jwt
     app.get("/jwt", async (req, res) => {
       const email = req.query.email;
       const query = { email: email };
       const user = await usersCollection.findOne(query);
-
       if (user) {
         const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, {
           expiresIn: "5h",
@@ -76,16 +56,14 @@ async function run() {
       }
       res.status(403).send({ accessToken: "" });
     });
-
     //products category load
     app.get("/productsCategory", async (req, res) => {
       const query = {};
       const result = await productsCategoryCollection.find(query).toArray();
       res.send(result);
     });
-
     //get categoryproducts
-    app.get("/products/:id", verifyJWT, async (req, res) => {
+    app.get("/products/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { category_Id: id };
       const result = await productsCollection.find(filter).toArray();
@@ -97,16 +75,21 @@ async function run() {
       const result = await productsCollection.insertOne(products);
       res.send(result);
     });
-
+    //product show for email
+    // app.get("/users/:role", async (req, res) => {
+    //   const role = req.params.role;
+    //   const query = { role: role };
+    //   const result = await usersCollection.find(query).toArray();
+    //   res.send(result);
+    // });
     app.get("/users/:role", async (req, res) => {
       const role = req.params.role;
       const query = { role: role };
       const user = await usersCollection.find(query).toArray();
       res.send(user);
     });
-
     //make verified
-    app.put("/users/:id", verifyJWT, verifyAdmin, async (req, res) => {
+    app.put("/users/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
       const options = { upsert: true };
@@ -128,7 +111,6 @@ async function run() {
       const result = await productsCollection.find(query).toArray();
       res.send(result);
     });
-
     //product add verified by admin --
     app.put("/products/:id", async (req, res) => {
       const id = req.params.id;
@@ -146,7 +128,6 @@ async function run() {
       );
       res.send(result);
     });
-
     // for seller data
     app.get("/products", async (req, res) => {
       const email = req.query.email;
@@ -155,7 +136,7 @@ async function run() {
       res.send(result);
     });
     //delete seller data
-    app.delete("/products/:id", verifyJWT, async (req, res) => {
+    app.delete("/products/:id", async (req, res) => {
       const email = req.params.id;
       const filter = { _id: ObjectId(id) };
       const result = await productsCollection.deleteOne(filter);
@@ -172,29 +153,25 @@ async function run() {
       res.send(result);
     });
     //user
-
     //allusers get
-    app.get("/users", verifyJWT, verifyAdmin, async (req, res) => {
+    app.get("/users", async (req, res) => {
       const query = {};
       const result = await usersCollection.find(query).toArray();
       res.send(result);
     });
-
     //post user
     app.post("/users", async (req, res) => {
       const user = req.body;
       const result = await usersCollection.insertOne(user);
       res.send(result);
     });
-
     //delete user
-    app.delete("/users/:id", verifyJWT, verifyAdmin, async (req, res) => {
+    app.delete("/users/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
       const result = await usersCollection.deleteOne(filter);
       res.send(result);
     });
-
     //access oparation
     //admin for access
     app.get("/users/admin/:email", async (req, res) => {
@@ -203,7 +180,6 @@ async function run() {
       const user = await usersCollection.findOne(query);
       res.send({ isAdmin: user?.role === "admin" });
     });
-
     //buyer for access
     app.get("/users/buyer/:email", async (req, res) => {
       const email = req.params.email;
@@ -219,56 +195,20 @@ async function run() {
     });
     //cartorder
     //add to cart
-    app.post("/cart", verifyJWT, async (req, res) => {
+    app.post("/cart", async (req, res) => {
       const cart = req.body;
       const result = await ordersCollection.insertOne(cart);
       res.send(result);
     });
-
     //cart or order show
-    app.get("/cart", verifyJWT, async (req, res) => {
+    app.get("/cart", async (req, res) => {
       const email = req.query.email;
       const query = { email: email };
       const result = await ordersCollection.find(query).toArray();
       res.send(result);
     });
     //for payment
-    //payment method
-    app.post("/create-payment-intent", async (req, res) => {
-      const buying = req.body;
-      const price = buying.price;
-      const amount = price * 100;
-      const paymentIntent = await stripe.paymentIntents.create({
-        currency: "usd",
-        amount: amount,
-        payment_method_types: ["card"],
-      });
-      res.send({
-        clientSecret: paymentIntent.client_secret,
-      });
-    });
-
-    //payment insert
-    app.post("/payments", verifyJWT, async (req, res) => {
-      const payment = req.body;
-      const result = await paymentsCollection.insertOne(payment);
-      const id = payment.bookingId;
-      const filter = { _id: ObjectId(id) };
-      const updatedDoc = {
-        $set: {
-          paid: true,
-          transactionId: payment.transactionId,
-        },
-      };
-      const updatedResult = await ordersCollection.updateOne(
-        filter,
-        updatedDoc
-      );
-      res.send(result);
-    });
-
-    //for payment by get data by id
-    app.get("/cart/:id", verifyJWT, async (req, res) => {
+    app.get("/cart/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
       const result = await ordersCollection.findOne(query).toArray();
@@ -278,5 +218,4 @@ async function run() {
   }
 }
 run().catch((error) => console.log(error));
-
 app.listen(port, console.log("Port running on", port));
