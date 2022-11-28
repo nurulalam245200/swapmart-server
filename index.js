@@ -78,7 +78,27 @@ async function run() {
       const result = await productsCollection.find(filter).toArray();
       res.send(result);
     });
-
+    // product insert by seller
+    app.post("/products", async (req, res) => {
+      const products = req.body;
+      const result = await productsCollection.insertOne(products);
+      res.send(result);
+    });
+    //product show in manage products
+    app.get("/products", async (req, res) => {
+      const query = {};
+      const result = await productsCollection.find(query).toArray();
+      res.send(result);
+    });
+    //info for seller add product
+    app.get("/productInfo", async (req, res) => {
+      const query = {};
+      const result = await productsCollection
+        .find(query)
+        .project({ email: 1 })
+        .toArray();
+      res.send(result);
+    });
     //user
     //allusers get
     app.get("/users", async (req, res) => {
@@ -117,6 +137,12 @@ async function run() {
       const query = { email };
       const user = await usersCollection.findOne(query);
       res.send({ isBuyer: user?.role === "buyer" });
+    });
+    app.get("/users/seller/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email };
+      const user = await usersCollection.findOne(query);
+      res.send({ isSeller: user?.role === "seller" });
     });
     //cartorder
     //add to cart
